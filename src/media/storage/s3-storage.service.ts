@@ -56,6 +56,7 @@ export class S3StorageService extends StorageService {
 
   async createPresignedUploadUrl(params: {
     objectKey: string;
+    mediaType: 'IMAGE' | 'VIDEO';
     contentType: string;
     isPublic: boolean;
     expiresInSeconds: number;

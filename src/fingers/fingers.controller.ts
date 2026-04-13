@@ -25,6 +25,12 @@ export class FingersController {
     return this.fingersService.getMyFingers(BigInt(user.userId));
   }
 
+  @ApiOperation({ summary: '내가 받은 핑거 요청 조회' })
+  @Get('requests/me')
+  async getMyPendingRequests(@CurrentUser() user: AuthUser) {
+    return this.fingersService.getMyPendingRequests(BigInt(user.userId));
+  }
+
   @ApiOperation({ summary: '핑거 추가' })
   @Post(':targetUserId')
   async addFinger(
@@ -41,6 +47,30 @@ export class FingersController {
     @Param('targetUserId', ParseBigIntPipe) targetUserId: bigint,
   ) {
     return this.fingersService.removeFinger(BigInt(user.userId), targetUserId);
+  }
+
+  @ApiOperation({ summary: '핑거 요청 수락' })
+  @Post('requests/:requesterUserId/accept')
+  async acceptFingerRequest(
+    @CurrentUser() user: AuthUser,
+    @Param('requesterUserId', ParseBigIntPipe) requesterUserId: bigint,
+  ) {
+    return this.fingersService.acceptFingerRequest(
+      BigInt(user.userId),
+      requesterUserId,
+    );
+  }
+
+  @ApiOperation({ summary: '핑거 요청 거절' })
+  @Delete('requests/:requesterUserId')
+  async rejectFingerRequest(
+    @CurrentUser() user: AuthUser,
+    @Param('requesterUserId', ParseBigIntPipe) requesterUserId: bigint,
+  ) {
+    return this.fingersService.rejectFingerRequest(
+      BigInt(user.userId),
+      requesterUserId,
+    );
   }
 
   @ApiOperation({ summary: '상호 핑거 여부 조회' })

@@ -75,6 +75,72 @@ export class FingersService {
     };
   }
 
+  async getMyPendingRequests(ownerUserId: bigint) {
+    const requests = await this.prisma.fingerRelation.findMany({
+      where: {
+        targetUserId: ownerUserId,
+        deletedAt: null,
+        ownerUser: {
+          deletedAt: null,
+          status: 'ACTIVE',
+        },
+      },
+      include: {
+        ownerUser: {
+          select: {
+            id: true,
+            username: true,
+            profile: {
+              select: {
+                displayName: true,
+                profileImageUrl: true,
+                profileImageFocusX: true,
+                profileImageFocusY: true,
+                profileImageScale: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const filteredRequests = [];
+    for (const relation of requests) {
+      const isMutual = await this.fingersPolicy.isMutual(
+        ownerUserId,
+        relation.ownerUserId,
+      );
+
+      if (!isMutual) {
+        filteredRequests.push(relation);
+      }
+    }
+
+    return {
+      count: filteredRequests.length,
+      items: filteredRequests.map((relation) => ({
+        relationId: relation.id,
+        user: {
+          ...relation.ownerUser,
+          profile: relation.ownerUser.profile
+            ? {
+                ...relation.ownerUser.profile,
+                profileImageLayout: {
+                  focusX: relation.ownerUser.profile.profileImageFocusX,
+                  focusY: relation.ownerUser.profile.profileImageFocusY,
+                  scale: relation.ownerUser.profile.profileImageScale,
+                },
+              }
+            : null,
+        },
+        createdAt: relation.createdAt,
+      })),
+    };
+  }
+
   async addFinger(ownerUserId: bigint, targetUserId: bigint) {
     this.fingersPolicy.validateNotSelf(ownerUserId, targetUserId);
 
@@ -246,6 +312,60 @@ export class FingersService {
     return {
       removed: true,
       targetUserId,
+    };
+  }
+
+  async acceptFingerRequest(ownerUserId: bigint, requesterUserId: bigint) {
+    this.fingersPolicy.validateNotSelf(ownerUserId, requesterUserId);
+
+    const existingRequest = await this.prisma.fingerRelation.findFirst({
+      where: {
+        ownerUserId: requesterUserId,
+        targetUserId: ownerUserId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existingRequest) {
+      throw new NotFoundException('finger request not found');
+    }
+
+    return this.addFinger(ownerUserId, requesterUserId);
+  }
+
+  async rejectFingerRequest(ownerUserId: bigint, requesterUserId: bigint) {
+    this.fingersPolicy.validateNotSelf(ownerUserId, requesterUserId);
+
+    const existingRequest = await this.prisma.fingerRelation.findFirst({
+      where: {
+        ownerUserId: requesterUserId,
+        targetUserId: ownerUserId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existingRequest) {
+      throw new NotFoundException('finger request not found');
+    }
+
+    await this.prisma.fingerRelation.update({
+      where: {
+        id: existingRequest.id,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return {
+      rejected: true,
+      userId: requesterUserId,
     };
   }
 

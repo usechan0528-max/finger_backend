@@ -34,6 +34,7 @@ export class MediaService {
 
     return this.storageService.createPresignedUploadUrl({
       objectKey,
+      mediaType: dto.mediaType,
       contentType: dto.mimeType,
       isPublic: visibility === 'PUBLIC',
       expiresInSeconds,
@@ -41,6 +42,13 @@ export class MediaService {
   }
 
   async resolveReadUrl(dto: ResolveMediaUrlDto) {
+    if (/^https?:\/\//i.test(dto.objectKey)) {
+      return {
+        url: dto.objectKey,
+        expiresIn: null,
+      };
+    }
+
     if (dto.visibility === 'PUBLIC') {
       return {
         url: this.storageService.getPublicUrl(dto.objectKey),
