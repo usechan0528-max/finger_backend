@@ -64,7 +64,6 @@ export class S3StorageService extends StorageService {
       Bucket: this.bucket,
       Key: params.objectKey,
       ContentType: params.contentType,
-      ACL: params.isPublic ? 'public-read' : undefined,
     });
 
     const uploadUrl = await getSignedUrl(this.presignClient, command, {

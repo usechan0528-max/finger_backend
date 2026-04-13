@@ -149,3 +149,48 @@ npm run test:e2e
 - Render Postgres
 - S3 또는 R2 환경 변수
 - `FRONTEND_ORIGINS`에 실제 프론트 주소 입력
+
+## 10. Cloudflare R2 빠른 연결
+
+이미지 업로드까지 살리려면 Render 백엔드에 외부 스토리지가 필요합니다.
+현재 구조에서는 Cloudflare R2가 가장 가볍고, 비용 부담도 작습니다.
+
+### 준비할 것
+
+- Cloudflare 계정
+- R2 bucket 1개
+- R2 API token 또는 access key / secret key
+- 공개 조회용 주소 1개
+  - 베타 단계면 `r2.dev`
+  - 더 안정적으로 쓰려면 custom domain
+
+### bucket 설정
+
+1. R2 bucket 생성
+2. 필요하면 Public access 활성화
+3. Public URL 확보
+   - 예: `https://pub-xxxx.r2.dev`
+
+### Render 환경 변수 예시
+
+```bash
+AWS_REGION=auto
+AWS_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
+AWS_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
+AWS_S3_BUCKET=<R2_BUCKET_NAME>
+AWS_S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+AWS_S3_PRESIGN_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+AWS_S3_PUBLIC_BASE_URL=https://<PUBLIC_BUCKET_DOMAIN>
+AWS_S3_FORCE_PATH_STYLE=true
+```
+
+### 왜 ACL을 쓰지 않나
+
+R2는 bucket 공개 범위를 bucket/domain 단위로 다루는 편이 더 자연스럽습니다.
+그래서 현재 업로드 코드는 object마다 `public-read` ACL을 따로 붙이지 않도록 정리되어 있습니다.
+
+### 연결 후 확인
+
+1. Render 서비스 재배포
+2. `/api/v1/health` 확인
+3. 프론트에서 프로필 사진 또는 게시물 이미지 업로드 테스트
